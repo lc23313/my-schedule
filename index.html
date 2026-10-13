@@ -582,6 +582,27 @@
   @media (min-width:920px){
     .fab{right:max(20px, calc(50vw - 452px));bottom:28px}
   }
+
+  /* 5) 日期说明行：显示「今天 / 明天 + 几月几日 周X」，选日期时最有用 */
+  .datehint{font-size:11.5px;color:var(--muted);margin:6px 0 10px;line-height:1.6}
+  .datehint b{color:var(--accent);font-weight:600}
+
+  /* 6) 桌面原生日期/时间控件：默认那个小图标又小又灰，容易被忽略；
+        加大点击区域、跟主题色联动，鼠标悬停有明显反馈 */
+  @media (hover:hover) and (pointer:fine){
+    input[type=date]::-webkit-calendar-picker-indicator,
+    input[type=time]::-webkit-calendar-picker-indicator{
+      cursor:pointer;opacity:.5;padding:3px;border-radius:6px;
+      transition:opacity .15s,background .15s;
+    }
+    input[type=date]::-webkit-calendar-picker-indicator:hover,
+    input[type=time]::-webkit-calendar-picker-indicator:hover{
+      opacity:1;background:var(--accent-tint);
+    }
+    /* 桌面上的日期/时间框是「点开选择」而不是「打字」，用 pointer 光标提示可点 */
+    .fld input[type=date],.fld input[type=time]{cursor:pointer}
+    .fld input[type=date]:focus,.fld input[type=time]:focus{cursor:auto}
+  }
 </style>
 </head>
 <body>
@@ -744,12 +765,12 @@
       · 点「＋ 添加」先选<b>事项性质</b>：<br>
       &nbsp;&nbsp;<b>时间段</b>——有开始和结束，比如「14:00–16:00 实验课」，进行中会绿底高亮；<br>
       &nbsp;&nbsp;<b>截止时间</b>——只有一个截止时刻，比如「周五 23:59 前交报告」，卡片标「截止」，到点提醒、过期变红。<br>
-      · 时间段里结束早于开始会算成<b>跨天</b>（22:00 → 01:00）；截止类有一键「今天/明天/3 天后/一周后 23:59」。<br>
+      · 时间段里结束早于开始会算成<b>跨天</b>（22:00 → 01:00）；日期下面有「今天/明天/后天/一周后」快捷按钮，下方还会提示「几月几日 周X」；截止类另有一键「今天/明天/3 天后/一周后 23:59」。<br>
       · 到点会弹提醒卡片 + 提示音 + 震动，可以直接在卡片上「标记完成」。<br>
       · 正在进行的日程会显示绿底「进行中」，逾期未完成的变红并收进「已结束 / 已逾期」。<br>
       · 顶部 <b>短期提醒</b> 是随手记，不用填时间：点「＋ 添加短期提醒」输入后回车；点左侧圆点标为重要；点文字可改。<br>
       · <b>多设备同步</b>：在「提醒设置」里打开，填 Supabase 的地址 / anon key / 自定同步码，各设备填一样就会自动互相同步（改动后约 3 秒上传，切回页面自动拉取）。断网也能用，联网后自动补上。<br>
-      · <b>在电脑上用鼠标时</b>：悬停到 ✓ ✎ 🗑 上会显示按钮名称；<b>Esc</b> 关闭弹窗，<b>Ctrl / ⌘ + Enter</b> 直接保存；点弹窗外面的灰色区域也能关。<br>
+      · <b>在电脑上用鼠标</b>：点一下日期/时间框就直接弹出自带的日历和时间列表；悬停到 ✓ ✎ 🗑 上会显示按钮名称；<b>Esc</b> 关闭弹窗，<b>Ctrl / ⌘ + Enter</b> 直接保存；点弹窗外面的灰色区域也能关。<br>
       · 数据只存在这台手机的浏览器里（<code>localStorage</code>），不会上传到别处；没开同步时<b>清理微信/浏览器缓存会清掉数据</b>，重要内容记得在设置里点「复制备份」存一段文字。
     </div>
   </details>
@@ -784,6 +805,13 @@
       <label for="fDate">日期</label>
       <input id="fDate" type="date">
     </div>
+    <div class="quick" id="qDate">
+      <button type="button" data-date="today">今天</button>
+      <button type="button" data-date="tomorrow">明天</button>
+      <button type="button" data-date="plus2">后天</button>
+      <button type="button" data-date="plus7">一周后</button>
+    </div>
+    <div class="datehint" id="dateHint"></div>
     <div class="fld two" id="rowRange">
       <div>
         <label for="fStart">开始时间</label>
@@ -1887,8 +1915,57 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
       $("#fDue").value = "23:59";
       syncPickers();
       checkOvernight();
+      renderDateHint();
     });
   });
+
+  /* ================= 日期快捷选择 + 星期提示 ================= */
+  function renderDateHint(){
+    var el = $("#dateHint");
+    if(!el) return;
+    var p = String($("#fDate").value || "").split("-");
+    if(p.length !== 3){ el.textContent = ""; return; }
+    var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    if(isNaN(d.getTime())){ el.textContent = ""; return; }
+    var t = new Date();
+    var day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    var today = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+    var diff = Math.round((day - today) / 86400000);
+    var rel = diff === 0 ? "今天" : diff === 1 ? "明天" : diff === 2 ? "后天"
+            : diff === -1 ? "昨天" : diff === -2 ? "前天" : "";
+    el.innerHTML =
+      (rel ? "<b>" + rel + "</b> · " : "") +
+      (d.getMonth() + 1) + " 月 " + d.getDate() + " 日 周" + WEEK[d.getDay()] +
+      (d.getFullYear() !== t.getFullYear() ? " · " + d.getFullYear() + " 年" : "");
+  }
+  function setDateOffset(k){
+    var d = new Date();
+    if(k === "tomorrow") d.setDate(d.getDate() + 1);
+    else if(k === "plus2") d.setDate(d.getDate() + 2);
+    else if(k === "plus7") d.setDate(d.getDate() + 7);
+    $("#fDate").value = ymd(d);
+    syncPickers();
+    renderDateHint();
+  }
+  $$("[data-date]").forEach(function(b){
+    b.addEventListener("click", function(){ setDateOffset(b.getAttribute("data-date")); });
+  });
+  $("#fDate").addEventListener("change", renderDateHint);
+  $("#fDate").addEventListener("input", renderDateHint);
+
+  /* 桌面端：点一下整个日期/时间框就弹出原生选择器。
+     Chrome 里只有点右侧那个小图标才会弹日历，直接点文本框毫无反应，
+     鼠标用户会以为控件坏了。用 showPicker() 补上；
+     只在鼠标设备上做——触屏本来就点一下就弹，重复调用反而可能打架。 */
+  if(FINE){
+    ["#fDate", "#fStart", "#fEnd", "#fDue"].forEach(function(sel){
+      var el = $(sel);
+      if(!el || typeof el.showPicker !== "function") return;
+      el.addEventListener("click", function(){
+        try{ el.showPicker(); }catch(e){}
+      });
+    });
+  }
 
   function openSheet(item){
     editingId = item ? item.id : null;
@@ -1921,6 +1998,7 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
     setKind(item ? item.kind : (state.settings.lastKind || "range"), false);
     syncCatPick();
     syncPickers();
+    renderDateHint();
     $("#mask").classList.add("show");
     $("#sheet").classList.add("show");
     document.body.style.overflow = "hidden";
