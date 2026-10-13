@@ -610,9 +610,25 @@
   #pkSheet{z-index:65}
   /* 只读的原生框保持和普通输入框一样的外观（readonly 由脚本加上） */
   .fld input[readonly]{background:var(--card-2);color:var(--text);opacity:1}
-  /* 选择器已经自己接管了，原生那个小日历图标点了也没用，藏掉免得误导 */
+  /* 选择器已经自己接管了，原生那个小图标点了没用，藏掉免得误导 */
   .fld input[readonly]::-webkit-calendar-picker-indicator{display:none}
   .fld input[readonly]::-webkit-inner-spin-button{display:none}
+
+  /* 自己补一个看得见的日历 / 时钟图标：否则这个框看起来就是普通文字框，
+     没人知道点它能弹出选择器（原生图标被藏掉后就是这个问题） */
+  .pk-box{position:relative;display:block}
+  .pk-box > input[readonly]{padding-right:44px}
+  .pk-ico{
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    width:19px;height:19px;pointer-events:none;opacity:.5;
+    background-repeat:no-repeat;background-position:center;background-size:contain;
+  }
+  .pk-ico.date{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%237286a0' stroke-width='1.6' stroke-linecap='round'><rect x='2.6' y='4.6' width='14.8' height='12.4' rx='2.6'/><path d='M2.6 8.6h14.8M6.6 2.6v3M13.4 2.6v3'/></svg>");
+  }
+  .pk-ico.time{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%237286a0' stroke-width='1.6' stroke-linecap='round'><circle cx='10' cy='10' r='7.4'/><path d='M10 5.7v4.7l3 1.8'/></svg>");
+  }
 
   .pk-bar{display:flex;align-items:center;gap:8px;margin:2px 0 10px}
   .pk-ym{flex:1;text-align:center;font-size:15px;font-weight:650;letter-spacing:.3px}
@@ -2206,8 +2222,24 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
     var el = $(pair[0]);
     if(!el) return;
     el.setAttribute("readonly", "readonly");
+    /* 用一层 .pk-box 包住输入框：这样右上角图标能精确对齐「输入框」本身
+       （时间段的两个框外面还有一层 div 带 label，直接绝对定位会跑偏） */
+    var host = el.parentNode;
+    if(!host.classList.contains("pk-box")){
+      var box = document.createElement("span");
+      box.className = "pk-box";
+      host.insertBefore(box, el);
+      box.appendChild(el);
+      var ico = document.createElement("span");
+      ico.className = "pk-ico " + pair[1];
+      ico.setAttribute("aria-hidden", "true");
+      box.appendChild(ico);
+      host = box;
+    }
     var open = function(){ if(pair[1] === "date") pkOpenDate(el); else pkOpenTime(el); };
     el.addEventListener("click", open);
+    /* 兜底：点到图标所在的留白区域也算 */
+    host.addEventListener("click", function(e){ if(e.target === host) open(); });
     el.addEventListener("keydown", function(e){
       if(e.key === "Enter" || e.key === " " || e.key === "Spacebar"){ e.preventDefault(); open(); }
     });
