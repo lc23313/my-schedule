@@ -603,6 +603,62 @@
     .fld input[type=date],.fld input[type=time]{cursor:pointer}
     .fld input[type=date]:focus,.fld input[type=time]:focus{cursor:auto}
   }
+
+  /* ================= 自绘日期 / 时间选择器 ================= */
+  /* 层级：表单弹层是 60/61，这是它上面再叠一层 */
+  #pkMask{z-index:64}
+  #pkSheet{z-index:65}
+  /* 只读的原生框保持和普通输入框一样的外观（readonly 由脚本加上） */
+  .fld input[readonly]{background:var(--card-2);color:var(--text);opacity:1}
+  /* 选择器已经自己接管了，原生那个小日历图标点了也没用，藏掉免得误导 */
+  .fld input[readonly]::-webkit-calendar-picker-indicator{display:none}
+  .fld input[readonly]::-webkit-inner-spin-button{display:none}
+
+  .pk-bar{display:flex;align-items:center;gap:8px;margin:2px 0 10px}
+  .pk-ym{flex:1;text-align:center;font-size:15px;font-weight:650;letter-spacing:.3px}
+  .pk-nav{
+    width:36px;height:36px;flex:none;border-radius:10px;border:1px solid var(--line);
+    background:#fff;color:var(--text-2);font-size:19px;line-height:1;
+    display:grid;place-items:center;padding:0;
+  }
+  .pk-nav:active{background:var(--card-2)}
+
+  .pk-week,.pk-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .pk-week{margin-bottom:5px}
+  .pk-week span{text-align:center;font-size:11px;color:var(--muted-2);padding:2px 0}
+  .pk-grid button{
+    aspect-ratio:1/1;min-height:34px;border-radius:10px;border:1px solid transparent;
+    font-size:14px;color:var(--text);display:grid;place-items:center;padding:0;
+  }
+  .pk-grid button.out{color:var(--muted-2);opacity:.5}
+  .pk-grid button.wk{color:var(--danger)}
+  .pk-grid button.wk.out{opacity:.45}
+  .pk-grid button.today{border-color:var(--accent);color:var(--accent);font-weight:650}
+  .pk-grid button.sel{background:var(--accent);color:#fff !important;font-weight:650;border-color:transparent}
+  .pk-grid button:active{background:var(--accent-tint)}
+
+  .pk-foot{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .pk-live{margin-left:auto;font-size:12px;color:var(--muted);text-align:right}
+
+  .pk-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .pk-col{
+    position:relative;height:212px;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    border:1px solid var(--line);border-radius:12px;background:var(--card-2);padding:5px;
+  }
+  .pk-col button{
+    display:block;width:100%;padding:9px 0;border-radius:9px;border:1px solid transparent;
+    text-align:center;font-size:15px;color:var(--text);
+  }
+  .pk-col button.sel{background:var(--accent);color:#fff;font-weight:650}
+  .pk-col button:active{background:var(--accent-tint)}
+
+  @media (hover:hover) and (pointer:fine){
+    .pk-nav:hover{background:var(--card-2);color:var(--text)}
+    .pk-grid button:hover{background:var(--accent-tint)}
+    .pk-grid button.sel:hover{background:var(--accent)}
+    .pk-col button:hover{background:var(--accent-tint)}
+    .pk-col button.sel:hover{background:var(--accent)}
+  }
 </style>
 </head>
 <body>
@@ -770,7 +826,7 @@
       · 正在进行的日程会显示绿底「进行中」，逾期未完成的变红并收进「已结束 / 已逾期」。<br>
       · 顶部 <b>短期提醒</b> 是随手记，不用填时间：点「＋ 添加短期提醒」输入后回车；点左侧圆点标为重要；点文字可改。<br>
       · <b>多设备同步</b>：在「提醒设置」里打开，填 Supabase 的地址 / anon key / 自定同步码，各设备填一样就会自动互相同步（改动后约 3 秒上传，切回页面自动拉取）。断网也能用，联网后自动补上。<br>
-      · <b>在电脑上用鼠标</b>：点一下日期/时间框就直接弹出自带的日历和时间列表；悬停到 ✓ ✎ 🗑 上会显示按钮名称；<b>Esc</b> 关闭弹窗，<b>Ctrl / ⌘ + Enter</b> 直接保存；点弹窗外面的灰色区域也能关。<br>
+      · <b>在电脑上用鼠标</b>：点一下日期/时间框就弹出应用自带的日历和时间列表（电脑和微信里长得一样）；悬停到 ✓ ✎ 🗑 上会显示按钮名称；<b>Esc</b> 关闭弹窗，<b>Ctrl / ⌘ + Enter</b> 直接保存；点弹窗外面的灰色区域也能关。<br>
       · 数据只存在这台手机的浏览器里（<code>localStorage</code>），不会上传到别处；没开同步时<b>清理微信/浏览器缓存会清掉数据</b>，重要内容记得在设置里点「复制备份」存一段文字。
     </div>
   </details>
@@ -879,6 +935,42 @@
   <div class="acts">
     <button type="button" class="btn gray" id="ioCancel">关闭</button>
     <button type="button" class="btn blue" id="ioOk">复制</button>
+  </div>
+</div>
+
+<!-- 自绘日期 / 时间选择器：不依赖系统控件，电脑、微信、任何内核表现一致 -->
+<div class="mask" id="pkMask"></div>
+<div class="sheet" id="pkSheet">
+  <div class="sheet-grab"></div>
+  <div class="sheet-head">
+    <h2 id="pkTitle">选择日期</h2>
+    <button class="x" id="pkClose" title="关闭（Esc）" aria-label="关闭">×</button>
+  </div>
+
+  <div id="pkDate">
+    <div class="pk-bar">
+      <button type="button" class="pk-nav" id="pkPrev" aria-label="上个月">‹</button>
+      <div class="pk-ym" id="pkYm"></div>
+      <button type="button" class="pk-nav" id="pkNext" aria-label="下个月">›</button>
+    </div>
+    <div class="pk-week" id="pkWeek"></div>
+    <div class="pk-grid" id="pkGrid"></div>
+    <div class="pk-foot">
+      <button type="button" class="sbtn" id="pkToday">今天</button>
+      <button type="button" class="sbtn" id="pkTomorrow">明天</button>
+      <span class="pk-live" id="pkLive"></span>
+    </div>
+  </div>
+
+  <div id="pkTime" hidden>
+    <div class="pk-cols">
+      <div class="pk-col" id="pkHour"></div>
+      <div class="pk-col" id="pkMin"></div>
+    </div>
+    <div class="pk-foot">
+      <button type="button" class="sbtn" id="pkNow">现在</button>
+      <span class="pk-live" id="pkTimeLive"></span>
+    </div>
   </div>
 </div>
 
@@ -1953,19 +2045,173 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
   $("#fDate").addEventListener("change", renderDateHint);
   $("#fDate").addEventListener("input", renderDateHint);
 
-  /* 桌面端：点一下整个日期/时间框就弹出原生选择器。
-     Chrome 里只有点右侧那个小图标才会弹日历，直接点文本框毫无反应，
-     鼠标用户会以为控件坏了。用 showPicker() 补上；
-     只在鼠标设备上做——触屏本来就点一下就弹，重复调用反而可能打架。 */
-  if(FINE){
-    ["#fDate", "#fStart", "#fEnd", "#fDue"].forEach(function(sel){
-      var el = $(sel);
-      if(!el || typeof el.showPicker !== "function") return;
-      el.addEventListener("click", function(){
-        try{ el.showPicker(); }catch(e){}
-      });
-    });
+  /* ================= 自绘日期 / 时间选择器 =================
+     为什么自己做：原生 <input type=date|time> 的交互各浏览器差别很大，
+     Chrome 桌面只有点右侧那个小图标才弹日历、点框本身毫无反应（就是这个问题），
+     微信老内核还可能完全不支持。干脆全部自己画，任何环境表现完全一致。 */
+  var PK_W = ["日","一","二","三","四","五","六"];
+  var pkTarget = null, pkYM = null;
+
+  function pk2(n){ return (n < 10 ? "0" : "") + n; }
+  function pkParse(v){
+    var p = String(v || "").split("-");
+    if(p.length !== 3) return null;
+    var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    return isNaN(d.getTime()) ? null : d;
   }
+  function pkShow(){
+    $("#pkMask").classList.add("show");
+    $("#pkSheet").classList.add("show");
+  }
+  function pkClose(){
+    $("#pkMask").classList.remove("show");
+    $("#pkSheet").classList.remove("show");
+    pkTarget = null;
+  }
+  function pkApply(v){
+    if(!pkTarget) return;
+    pkTarget.value = v;
+    /* 派发 change，让已有的监听（星期提示、跨天提示）自动跟上 */
+    pkTarget.dispatchEvent(new Event("change", { bubbles:true }));
+  }
+
+  /* ---- 日期：月历 ---- */
+  function pkRenderWeek(){
+    if($("#pkWeek").childNodes.length) return;
+    $("#pkWeek").innerHTML = PK_W.map(function(w){ return "<span>" + w + "</span>"; }).join("");
+  }
+  function pkLive(){
+    var p = String($("#fDate").value || "").split("-");
+    if(p.length !== 3){ $("#pkLive").textContent = ""; return; }
+    var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    $("#pkLive").textContent = Number(p[1]) + " 月 " + Number(p[2]) + " 日 周" + PK_W[d.getDay()];
+  }
+  function pkRenderGrid(){
+    var y = pkYM.getFullYear(), m = pkYM.getMonth();
+    $("#pkYm").textContent = y + " 年 " + (m + 1) + " 月";
+    var start = new Date(y, m, 1).getDay();
+    var days = new Date(y, m + 1, 0).getDate();
+    var prevDays = new Date(y, m, 0).getDate();
+    var sv = pkTarget ? String(pkTarget.value || "") : "";
+    var todayK = ymd(new Date());
+    var html = "", d, k, cls, dd;
+    for(var i = 0; i < 42; i++){
+      dd = i - start + 1;
+      if(dd < 1){ d = new Date(y, m - 1, prevDays + dd); cls = "out"; }
+      else if(dd > days){ d = new Date(y, m + 1, dd - days); cls = "out"; }
+      else { d = new Date(y, m, dd); cls = ""; }
+      k = ymd(d);
+      if(k === sv) cls += " sel";
+      else if(k === todayK) cls += " today";
+      if(d.getDay() === 0 || d.getDay() === 6) cls += " wk";
+      html += '<button type="button" data-d="' + k + '" class="' + cls.trim() + '"' +
+              (k === sv ? ' aria-current="date"' : "") + ">" + d.getDate() + "</button>";
+    }
+    $("#pkGrid").innerHTML = html;
+    pkLive();
+  }
+  function pkOpenDate(el){
+    pkTarget = el;
+    var cur = pkParse(el.value) || new Date();
+    pkYM = new Date(cur.getFullYear(), cur.getMonth(), 1);
+    $("#pkTitle").textContent = "选择日期";
+    $("#pkDate").hidden = false;
+    $("#pkTime").hidden = true;
+    pkRenderWeek();
+    pkRenderGrid();
+    pkShow();
+  }
+
+  /* ---- 时间：时 / 分 两列 ---- */
+  function pkOpenTime(el){
+    pkTarget = el;
+    $("#pkTitle").textContent = el.id === "fStart" ? "开始时间"
+                             : el.id === "fEnd"   ? "结束时间" : "截止时间";
+    $("#pkDate").hidden = true;
+    $("#pkTime").hidden = false;
+    var p = String(el.value || "").split(":");
+    var h = Number(p[0]), mi = Number(p[1]);
+    if(isNaN(h)) h = 9;
+    if(isNaN(mi)) mi = 0;
+    var i, hh = "", mm = "";
+    for(i = 0; i < 24; i++){
+      hh += '<button type="button" data-h="' + i + '"' + (i === h ? ' class="sel"' : "") + ">" + pk2(i) + " 时</button>";
+    }
+    for(i = 0; i < 60; i++){
+      mm += '<button type="button" data-m="' + i + '"' + (i === mi ? ' class="sel"' : "") + ">" + pk2(i) + " 分</button>";
+    }
+    $("#pkHour").innerHTML = hh;
+    $("#pkMin").innerHTML = mm;
+    $("#pkTimeLive").textContent = pk2(h) + ":" + pk2(mi);
+    pkShow();
+    /* 滚动必须等弹层显示之后再算，否则高度是 0；把选中项滚到正中间 */
+    setTimeout(function(){
+      [["#pkHour", "h", h], ["#pkMin", "m", mi]].forEach(function(t){
+        var col = $(t[0]);
+        if(!col) return;
+        var sel = col.querySelector('[data-' + t[1] + '="' + t[2] + '"]');
+        if(sel) col.scrollTop = sel.offsetTop - (col.clientHeight - sel.offsetHeight) / 2;
+      });
+    }, 30);
+  }
+  function pkSetTime(h, m){
+    if(!pkTarget) return;
+    var p = String(pkTarget.value || "").split(":");
+    var ch = Number(p[0]), cm = Number(p[1]);
+    if(isNaN(ch)) ch = 9;
+    if(isNaN(cm)) cm = 0;
+    if(h !== null) ch = h;
+    if(m !== null) cm = m;
+    pkApply(pk2(ch) + ":" + pk2(cm));
+    $$("#pkHour button").forEach(function(b){ b.classList.toggle("sel", Number(b.getAttribute("data-h")) === ch); });
+    $$("#pkMin button").forEach(function(b){ b.classList.toggle("sel", Number(b.getAttribute("data-m")) === cm); });
+    $("#pkTimeLive").textContent = pk2(ch) + ":" + pk2(cm);
+    if(m !== null) setTimeout(pkClose, 140);   // 分钟选完就收起
+  }
+
+  $("#pkMask").addEventListener("click", pkClose);
+  $("#pkClose").addEventListener("click", pkClose);
+  $("#pkPrev").addEventListener("click", function(){
+    pkYM = new Date(pkYM.getFullYear(), pkYM.getMonth() - 1, 1); pkRenderGrid();
+  });
+  $("#pkNext").addEventListener("click", function(){
+    pkYM = new Date(pkYM.getFullYear(), pkYM.getMonth() + 1, 1); pkRenderGrid();
+  });
+  $("#pkToday").addEventListener("click", function(){ pkApply(ymd(new Date())); pkClose(); });
+  $("#pkTomorrow").addEventListener("click", function(){
+    var d = new Date(); d.setDate(d.getDate() + 1); pkApply(ymd(d)); pkClose();
+  });
+  $("#pkGrid").addEventListener("click", function(e){
+    var b = e.target.closest("[data-d]");
+    if(!b || !pkTarget) return;
+    pkApply(b.getAttribute("data-d"));
+    pkClose();
+  });
+  $("#pkHour").addEventListener("click", function(e){
+    var b = e.target.closest("[data-h]");
+    if(b) pkSetTime(Number(b.getAttribute("data-h")), null);
+  });
+  $("#pkMin").addEventListener("click", function(e){
+    var b = e.target.closest("[data-m]");
+    if(b) pkSetTime(null, Number(b.getAttribute("data-m")));
+  });
+  $("#pkNow").addEventListener("click", function(){
+    var d = new Date();
+    pkSetTime(d.getHours(), d.getMinutes());
+  });
+
+  /* 接管原生控件：readonly 让浏览器不再弹自己的日历/时间列表（否则两套 UI 打架），
+     点击整框、或键盘回车/空格，都打开自绘选择器。 */
+  [["#fDate", "date"], ["#fStart", "time"], ["#fEnd", "time"], ["#fDue", "time"]].forEach(function(pair){
+    var el = $(pair[0]);
+    if(!el) return;
+    el.setAttribute("readonly", "readonly");
+    var open = function(){ if(pair[1] === "date") pkOpenDate(el); else pkOpenTime(el); };
+    el.addEventListener("click", open);
+    el.addEventListener("keydown", function(e){
+      if(e.key === "Enter" || e.key === " " || e.key === "Spacebar"){ e.preventDefault(); open(); }
+    });
+  });
 
   function openSheet(item){
     editingId = item ? item.id : null;
@@ -2707,7 +2953,8 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
     if(e.key !== "Escape" && e.keyCode !== 27) return;
     var ae = document.activeElement;
     if(ae && ae.tagName === "SELECT") return;   // 原生下拉展开中，交给浏览器自己关
-    var ioS = $("#ioSheet"), sh = $("#sheet");
+    var pks = $("#pkSheet"), ioS = $("#ioSheet"), sh = $("#sheet");
+    if(pks && pks.classList.contains("show")){ e.preventDefault(); pkClose(); return; }
     if(ioS && ioS.classList.contains("show")){ e.preventDefault(); closeIo(); return; }
     if(sh && sh.classList.contains("show")){ e.preventDefault(); closeSheet(); return; }
   }, true);
