@@ -380,8 +380,12 @@
     padding:6px 16px calc(18px + var(--safe-b));
     max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
     transform:translateY(102%);transition:transform .24s cubic-bezier(.3,.9,.3,1);
+    /* 关键：没弹出的弹层必须不吃点击。
+       宽屏下 .sheet 是「居中 + opacity:0」，如果不禁掉 pointer-events，
+       这个看不见的层会挡在屏幕中央把点击全吞掉（点日期框没反应、点到隐藏按钮还会报错）。 */
+    pointer-events:none;
   }
-  .sheet.show{transform:none}
+  .sheet.show{transform:none;pointer-events:auto}
   .sheet-grab{width:40px;height:4px;border-radius:2px;background:#e2e9f3;margin:8px auto 4px}
   .sheet-head{display:flex;align-items:center;margin:6px 0 12px}
   .sheet-head h2{margin:0;font-size:17px;font-weight:700}
@@ -2103,6 +2107,7 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
     $("#pkLive").textContent = Number(p[1]) + " 月 " + Number(p[2]) + " 日 周" + PK_W[d.getDay()];
   }
   function pkRenderGrid(){
+    if(!pkYM) pkYM = new Date();          // 兜底：任何情况下都不能因 pkYM 为空而抛错
     var y = pkYM.getFullYear(), m = pkYM.getMonth();
     $("#pkYm").textContent = y + " 年 " + (m + 1) + " 月";
     var start = new Date(y, m, 1).getDay();
@@ -2187,12 +2192,13 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
 
   $("#pkMask").addEventListener("click", pkClose);
   $("#pkClose").addEventListener("click", pkClose);
-  $("#pkPrev").addEventListener("click", function(){
-    pkYM = new Date(pkYM.getFullYear(), pkYM.getMonth() - 1, 1); pkRenderGrid();
-  });
-  $("#pkNext").addEventListener("click", function(){
-    pkYM = new Date(pkYM.getFullYear(), pkYM.getMonth() + 1, 1); pkRenderGrid();
-  });
+  function pkNav(step){
+    if(!pkYM) pkYM = new Date();
+    pkYM = new Date(pkYM.getFullYear(), pkYM.getMonth() + step, 1);
+    pkRenderGrid();
+  }
+  $("#pkPrev").addEventListener("click", function(){ pkNav(-1); });
+  $("#pkNext").addEventListener("click", function(){ pkNav(1); });
   $("#pkToday").addEventListener("click", function(){ pkApply(ymd(new Date())); pkClose(); });
   $("#pkTomorrow").addEventListener("click", function(){
     var d = new Date(); d.setDate(d.getDate() + 1); pkApply(ymd(d)); pkClose();
