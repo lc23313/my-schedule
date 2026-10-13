@@ -433,7 +433,10 @@
     border-radius:999px;padding:7px 14px;font-size:13px;color:var(--muted);cursor:pointer;
   }
   .catpick label::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.4}
-  .catpick label input{display:none}
+  /* 隐藏原生 radio，但不 display:none —— 否则键盘完全选不到分类 */
+  .catpick label input{
+    position:absolute;width:1px;height:1px;opacity:0;margin:0;pointer-events:none;
+  }
   .catpick label.on{font-weight:600;color:var(--c);background:var(--t);border-color:var(--c)}
   .catpick label.on::before{opacity:1}
   .checkline{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--text-2);padding:9px 0}
@@ -523,6 +526,62 @@
     font-size:15px;color:inherit;opacity:.55;background:transparent;border:0;padding:0;
   }
   #wechatTip .wxEnv{display:block;margin-top:5px;font-size:11px;opacity:.72}
+
+  /* ================= 桌面 / 鼠标（指针设备）适配 ================= */
+  /* 1) 键盘可达：只在用 Tab 操作时显示焦点框，鼠标点击不显示，不干扰视觉 */
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .card:focus-visible,.chip:focus-visible{outline-offset:1px}
+  /* 输入类控件本来就有边框高亮，不再叠一层外框，避免focus时出现双重描边 */
+  input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none}
+  /* 分类单选：视觉上还是圆角标签，但键盘 Tab 能选中并显示焦点环 */
+  .catpick label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* 2) 悬停反馈：只在真正的鼠标/触控板设备上生效，
+        避免触屏把 :hover「粘」住（手机上点了之后状态不消失） */
+  @media (hover:hover) and (pointer:fine){
+    .card{transition:box-shadow .15s ease}
+    .card:hover{box-shadow:var(--shadow-2)}
+    .ops button:hover{background:#eef3fb;color:var(--text)}
+    .ops button.ok:hover{background:var(--ok-tint);color:var(--ok)}
+    .ops button.rm:hover{background:var(--danger-tint);color:var(--danger)}
+    .sbtn:hover{background:var(--card-2);border-color:var(--line-2)}
+    .panel-head .mini:hover{background:var(--card-2);color:var(--text)}
+    .seg button:not(.on):hover{color:var(--text);background:#fff}
+    .catpick label:hover{background:var(--card-2)}
+    .quick button:hover{background:var(--accent-tint);color:var(--accent);border-color:#bcd0ff}
+    .acts .btn:hover{transform:translateY(1px)}
+    .acts .btn.blue:hover{filter:brightness(1.07)}
+    .appbar .add:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(59,110,246,.36)}
+    .fab:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(59,110,246,.42)}
+    .sheet-head .x:hover{color:var(--text)}
+    .memo-more:hover{color:var(--text-2)}
+    .chip:hover{border-color:var(--line-2);background:#fff}
+    .chip .del:hover{color:var(--danger)}
+    .switch:hover::after{box-shadow:0 1px 6px rgba(24,45,84,.26)}
+    .pick select:hover{background:#fff;border-color:var(--line-2)}
+    .banner .ba button:hover{background:var(--card-2)}
+    .banner .ba button.pri:hover{filter:brightness(1.07)}
+    /* 悬停反馈见下方 @media (hover:hover) 段落 */
+  }
+
+  /* 3) 桌面滚动条收窄，和卡片风格统一（Chrome / Edge / Safari） */
+  @media (hover:hover) and (pointer:fine){
+    ::-webkit-scrollbar{width:10px;height:10px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{
+      background:#ccd8e7;border-radius:8px;
+      border:3px solid transparent;background-clip:content-box;
+    }
+    ::-webkit-scrollbar-thumb:hover{background:#b4c4d9;background-clip:content-box}
+  }
+
+  /* 4) 宽屏下右下角悬浮「＋」跟着内容列走，别飘到屏幕最右侧。
+        算式来源：.wrap 最宽 760px、fab 宽 56px、留 16px 间隙 →
+        视口 ≥920px 时 fab 的 right = 50vw - 380 - 56 - 16，正好贴在内容列外侧；
+        更窄时退回 20px，此时内容列两侧本来就没有余量。 */
+  @media (min-width:920px){
+    .fab{right:max(20px, calc(50vw - 452px));bottom:28px}
+  }
 </style>
 </head>
 <body>
@@ -690,6 +749,7 @@
       · 正在进行的日程会显示绿底「进行中」，逾期未完成的变红并收进「已结束 / 已逾期」。<br>
       · 顶部 <b>短期提醒</b> 是随手记，不用填时间：点「＋ 添加短期提醒」输入后回车；点左侧圆点标为重要；点文字可改。<br>
       · <b>多设备同步</b>：在「提醒设置」里打开，填 Supabase 的地址 / anon key / 自定同步码，各设备填一样就会自动互相同步（改动后约 3 秒上传，切回页面自动拉取）。断网也能用，联网后自动补上。<br>
+      · <b>在电脑上用鼠标时</b>：悬停到 ✓ ✎ 🗑 上会显示按钮名称；<b>Esc</b> 关闭弹窗，<b>Ctrl / ⌘ + Enter</b> 直接保存；点弹窗外面的灰色区域也能关。<br>
       · 数据只存在这台手机的浏览器里（<code>localStorage</code>），不会上传到别处；没开同步时<b>清理微信/浏览器缓存会清掉数据</b>，重要内容记得在设置里点「复制备份」存一段文字。
     </div>
   </details>
@@ -697,7 +757,7 @@
   <footer>MY SCHEDULE · 离线可用</footer>
 </div>
 
-<button class="fab" id="btnAddFab" aria-label="添加事项">＋</button>
+<button class="fab" id="btnAddFab" title="添加事项" aria-label="添加事项">＋</button>
 <div class="banners" id="banners"></div>
 
 <div class="mask" id="mask"></div>
@@ -705,7 +765,7 @@
   <div class="sheet-grab"></div>
   <div class="sheet-head">
     <h2 id="sheetTitle">添加事项</h2>
-    <button class="x" id="sheetClose" aria-label="关闭">×</button>
+    <button class="x" id="sheetClose" title="关闭（Esc）" aria-label="关闭">×</button>
   </div>
   <form id="itemForm" autocomplete="off">
     <div class="fld">
@@ -782,7 +842,7 @@
   <div class="sheet-grab"></div>
   <div class="sheet-head">
     <h2 id="ioTitle">文字备份</h2>
-    <button class="x" id="ioClose" aria-label="关闭">×</button>
+    <button class="x" id="ioClose" title="关闭（Esc）" aria-label="关闭">×</button>
   </div>
   <div class="fld">
     <label id="ioHint">全选复制这段文字，存到备忘录或发给自己。</label>
@@ -959,7 +1019,12 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
   var X5     = /MQQBrowser|TBS\/|XWEB\//i.test(UA);             // 安卓微信的 X5 / XWEB 内核
   var HAS_VIB = !!(navigator.vibrate);                          // iOS 微信一律不提供震动 API
   var MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(UA);
-  var ENV = { wx:WX, ver:WX_VER, ios:WX_IOS, android:WX_AND, x5:X5, vib:HAS_VIB, mobile:MOBILE };
+  /* 真正的鼠标 / 触控板设备（用于决定要不要做 hover 与自动聚焦） */
+  var FINE = false;
+  try{
+    FINE = !!(window.matchMedia && window.matchMedia("(hover:hover) and (pointer:fine)").matches);
+  }catch(e){ FINE = false; }
+  var ENV = { wx:WX, ver:WX_VER, ios:WX_IOS, android:WX_AND, x5:X5, vib:HAS_VIB, mobile:MOBILE, fine:FINE };
   window.__schedEnv = ENV;                                      // 排查问题时可在控制台查看
   if(WX){
     document.documentElement.className +=
@@ -1306,9 +1371,9 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
   /* ================= 短期提醒 ================= */
   function memoHtml(m){
     return '<span class="chip' + (m.done ? " done" : (m.important ? " imp" : "")) + '" data-id="' + m.id + '">' +
-      '<button class="dot" data-act="imp" aria-label="标为重要"></button>' +
-      '<span class="txt" data-act="edit">' + esc(m.text) + "</span>" +
-      '<button class="del" data-act="del" aria-label="删除">×</button>' +
+      '<button class="dot" data-act="imp" title="标为重要" aria-label="标为重要"></button>' +
+      '<span class="txt" data-act="edit" title="点击修改">' + esc(m.text) + "</span>" +
+      '<button class="del" data-act="del" title="删除" aria-label="删除">×</button>' +
     "</span>";
   }
   function renderMemos(){
@@ -1462,9 +1527,9 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
         '<span class="range">' + (showDate ? '<em>' + (startAt(it).getMonth()+1) + "/" + startAt(it).getDate() + " </em>" : "") + esc(footTime(it)) + "</span>" +
         '<span class="cd ' + st.cls + '" data-cd="' + it.id + '">' + esc(st.text) + "</span>" +
         '<span class="ops">' +
-          '<button class="ok" data-act="done" aria-label="完成">' + (it.done ? "↺" : "✓") + "</button>" +
-          '<button data-act="edit" aria-label="修改">✎</button>' +
-          '<button class="rm" data-act="del" aria-label="删除">🗑</button>' +
+          '<button class="ok" data-act="done" title="' + (it.done ? "取消完成" : "标记完成") + '" aria-label="完成">' + (it.done ? "↺" : "✓") + "</button>" +
+          '<button data-act="edit" title="修改" aria-label="修改">✎</button>' +
+          '<button class="rm" data-act="del" title="删除" aria-label="删除">🗑</button>' +
         "</span>" +
       "</div>" +
     "</article>";
@@ -1583,8 +1648,8 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
           "<span>" + (startAt(it).getMonth()+1) + "/" + startAt(it).getDate() + " " + esc(rangeText(it)) + " · " + esc(it.category) + "</span>" +
         "</div>" +
         '<span class="ops">' +
-          '<button class="ok" data-act="done" aria-label="完成">' + (it.done ? "↺" : "✓") + "</button>" +
-          '<button data-act="edit" aria-label="修改">✎</button>' +
+          '<button class="ok" data-act="done" title="' + (it.done ? "取消完成" : "标记完成") + '" aria-label="完成">' + (it.done ? "↺" : "✓") + "</button>" +
+          '<button data-act="edit" title="修改" aria-label="修改">✎</button>' +
         "</span>" +
       "</div>";
     }).join("") + "</div>";
@@ -1859,6 +1924,14 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
     $("#mask").classList.add("show");
     $("#sheet").classList.add("show");
     document.body.style.overflow = "hidden";
+    /* 桌面鼠标：打开即聚焦标题并全选，省掉一次点击；
+       触摸设备不抢焦点，否则会立刻弹出软键盘挡住表单 */
+    if(FINE){
+      setTimeout(function(){
+        var t = $("#fTitle");
+        try{ t.focus(); t.select(); }catch(e){}
+      }, 80);
+    }
   }
   function closeSheet(){
     $("#mask").classList.remove("show");
@@ -2549,6 +2622,29 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
       setTimeout(syncPh, 400);
     }
   }
+
+  /* ================= 桌面 / 鼠标适配（运行时生效部分） ================= */
+  /* ① Esc 关闭弹层：桌面用户的肌肉记忆；手机上没有副作用 */
+  document.addEventListener("keydown", function(e){
+    if(e.key !== "Escape" && e.keyCode !== 27) return;
+    var ae = document.activeElement;
+    if(ae && ae.tagName === "SELECT") return;   // 原生下拉展开中，交给浏览器自己关
+    var ioS = $("#ioSheet"), sh = $("#sheet");
+    if(ioS && ioS.classList.contains("show")){ e.preventDefault(); closeIo(); return; }
+    if(sh && sh.classList.contains("show")){ e.preventDefault(); closeSheet(); return; }
+  }, true);
+
+  /* ② Ctrl / ⌘ + Enter 直接提交表单，鼠标党也能少点几下 */
+  (function(){
+    var form = $("#itemForm");
+    if(!form) return;
+    form.addEventListener("keydown", function(e){
+      if(!(e.ctrlKey || e.metaKey) || e.key !== "Enter") return;
+      e.preventDefault();
+      if(typeof form.requestSubmit === "function") form.requestSubmit();
+      else form.dispatchEvent(new Event("submit", { cancelable:true, bubbles:true }));
+    });
+  })();
 
   render();
   lastMin = "";
