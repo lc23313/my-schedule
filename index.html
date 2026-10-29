@@ -229,8 +229,9 @@
   .card.todo{--c:#3b6ef6}
   .card.live{background:linear-gradient(120deg,var(--ok-tint),#fff 62%);border-color:#c9ebd8}
   .card.late{background:linear-gradient(120deg,var(--danger-tint),#fff 62%);border-color:#f6cdce;--c:#e5484d}
-  .card.done{opacity:.6;background:var(--card-2)}
+  .card.done{opacity:.72;background:var(--card-2)}
   .card.done .card-title{text-decoration:line-through;color:var(--muted)}
+  .card.done .cd{color:var(--ok)}
   .card-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:3px}
   .tag{
     display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
@@ -244,6 +245,8 @@
   .pill.live{background:#d5f2e2;color:#0b7a44}
   .pill.late{background:#fbdcdd;color:#c0323a}
   .pill.due{background:#e7eeff;color:#2f5bd0}
+  .pill.ok{background:#dff5e8;color:#0b7a44}
+  .pill.carry{background:#eef2fb;color:#5a6f96;font-weight:600}
   .pill.live .bd{display:inline-block;width:6px;height:6px;border-radius:50%;background:#0f9d58;margin-right:4px;animation:pulse 1.4s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
   .upd{margin-left:auto;font-size:10.5px;color:var(--muted-2);white-space:nowrap}
@@ -330,6 +333,7 @@
   .numin:focus{border-color:var(--accent)}
   .sbtn{border:1px solid var(--line-2);background:#fff;border-radius:9px;padding:6px 12px;font-size:12.5px;color:var(--text-2)}
   .sbtn:active{background:var(--card-2)}
+  .sbtn[disabled]{opacity:.45;pointer-events:none}
   .sbtn.warn{color:#c0323a;border-color:#f3cfd0;background:#fff7f7}
   .switch{
     position:relative;width:46px;height:26px;flex:none;border-radius:999px;background:#ccd7e6;transition:.18s;
@@ -356,6 +360,13 @@
     padding:9px 11px;margin-bottom:9px;font-size:12.5px;line-height:1.75;
   }
   .help .tip.wechat{background:#e9f8ef;border-color:#c6ecd6;color:#0d7a45}
+  details.adv > summary{
+    list-style:none;font-size:12px;color:var(--muted);padding:6px 2px;
+    display:flex;align-items:center;gap:6px;
+  }
+  details.adv > summary::-webkit-details-marker{display:none}
+  details.adv > summary::before{content:"▸";font-size:11px;transition:.2s}
+  details.adv[open] > summary::before{transform:rotate(90deg)}
 
   footer{text-align:center;font-size:11px;color:var(--muted-2);letter-spacing:1px;padding:18px 0 4px}
 
@@ -622,6 +633,13 @@
      没人知道点它能弹出选择器（原生图标被藏掉后就是这个问题） */
   .pk-box{position:relative;display:block}
   .pk-box > input[readonly]{padding-right:44px}
+  /* 这四个框已经换成 type=text 并由自绘选择器接管：
+     关掉系统长按菜单与文字选中，避免手机上再冒出一套系统交互 */
+  .pk-box > input{
+    cursor:pointer;
+    -webkit-user-select:none;user-select:none;
+    -webkit-touch-callout:none;
+  }
   .pk-ico{
     position:absolute;right:12px;top:50%;transform:translateY(-50%);
     width:19px;height:19px;pointer-events:none;opacity:.5;
@@ -760,32 +778,35 @@
     <div class="tipbox ok" id="wechatTip" style="display:none"></div>
 
     <div class="row">
-      <div class="k">多设备同步<small>手机、电脑之间自动同步（用 Supabase，免费）</small></div>
+      <div class="k">多设备同步<small>手机、电脑共用一份数据 · 只需一个同步码</small></div>
       <button class="switch" id="swSync" role="switch" aria-checked="false"></button>
     </div>
     <div id="syncBox" hidden style="padding:2px 2px 10px;border-bottom:1px solid var(--line)">
-      <div class="fld" style="margin-bottom:10px">
-        <label for="syUrl">Supabase 项目地址</label>
-        <input id="syUrl" type="text" placeholder="https://xxxxxxxx.supabase.co" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div class="tipbox ok" style="margin-top:4px">
+        服务器已经配好了。<b>你只需要定一个同步码</b>（≥6 位），另一台设备打开这个页面填同一个码，数据就过来了。
       </div>
       <div class="fld" style="margin-bottom:10px">
-        <label for="syKey">anon public key（或新版 sb_publishable_…）</label>
-        <input id="syKey" type="text" placeholder="eyJhbGciOi… 或 sb_publishable_…" autocapitalize="off" autocorrect="off" spellcheck="false">
-      </div>
-      <div class="fld" style="margin-bottom:10px">
-        <label for="syCode">同步码（自己设一个，其它设备填一样的）</label>
-        <input id="syCode" type="text" placeholder="例如 tj-2026-9f3a" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <label for="syCode">同步码（各设备填一样的）</label>
+        <input id="syCode" type="text" placeholder="例如 sched-8k3f-92xq" autocapitalize="off" autocorrect="off" spellcheck="false">
       </div>
       <div class="row" style="border-bottom:0">
         <div class="k" id="syStatus">还没配置</div>
         <button class="sbtn" id="btnSyncNow">立即同步</button>
-        <button class="sbtn" id="btnShowSql">建表 SQL</button>
       </div>
-      <div class="help" style="margin-top:8px;font-size:11.5px">
-        去 <b>supabase.com</b> 建好项目 → 左侧 <b>SQL Editor</b> → New query → 点上面「建表 SQL」复制粘贴 → Run；
-        再回项目 <b>Project Settings → API</b> 复制 <b>Project URL</b> 和 <b>anon public key</b> 填到这里。
-        同步码自己设（≥6 位），各设备一致即可。<br>
-        ⚠️ 只能用 <b>anon / publishable</b> 那把钥匙，<b>绝不要</b>用 service_role / secret key。
+      <details class="adv" style="margin-top:2px">
+        <summary>服务器参数（已内置，一般不用动）</summary>
+        <div class="fld" style="margin:10px 0 10px">
+          <label for="syUrl">Supabase 项目地址</label>
+          <input id="syUrl" type="text" placeholder="https://xxxxxxxx.supabase.co" autocapitalize="off" autocorrect="off" spellcheck="false">
+        </div>
+        <div class="fld" style="margin-bottom:10px">
+          <label for="syKey">anon public key（或新版 sb_publishable_…）</label>
+          <input id="syKey" type="text" placeholder="eyJhbGciOi… 或 sb_publishable_…" autocapitalize="off" autocorrect="off" spellcheck="false">
+        </div>
+        <button class="sbtn" id="btnShowSql">看建表 SQL</button>
+      </details>
+      <div class="help" style="margin-top:10px;font-size:11.5px">
+        同步码是唯一一道锁：地址和 key 是公开的，别人拿到也读不到东西，<b>除非猜到你的同步码</b>。所以别用生日、<code>123456</code> 这类。
       </div>
     </div>
 
@@ -843,15 +864,16 @@
       &nbsp;&nbsp;<b>截止时间</b>——只有一个截止时刻，比如「周五 23:59 前交报告」，卡片标「截止」，到点提醒、过期变红。<br>
       · 时间段里结束早于开始会算成<b>跨天</b>（22:00 → 01:00）；日期下面有「今天/明天/后天/一周后」快捷按钮，下方还会提示「几月几日 周X」；截止类另有一键「今天/明天/3 天后/一周后 23:59」。<br>
       · 到点会弹提醒卡片 + 提示音 + 震动，可以直接在卡片上「标记完成」。<br>
-      · 正在进行的日程会显示绿底「进行中」，逾期未完成的变红并收进「已结束 / 已逾期」。<br>
+      · 正在进行的日程会显示绿底「进行中」；当天已过时间但还没勾完成的会变红、继续留在时间轴上，第二天才收进「已结束 / 已逾期」。<br>
       · 顶部 <b>短期提醒</b> 是随手记，不用填时间：点「＋ 添加短期提醒」输入后回车；点左侧圆点标为重要；点文字可改。<br>
-      · <b>多设备同步</b>：在「提醒设置」里打开，填 Supabase 的地址 / anon key / 自定同步码，各设备填一样就会自动互相同步（改动后约 3 秒上传，切回页面自动拉取）。断网也能用，联网后自动补上。<br>
+      · <b>多设备同步</b>：服务器地址和 key 已经内置好了，你只需要在「提醒设置」里定一个<b>同步码</b>（≥6 位），另一台设备打开这个页面填<b>同一个同步码</b>，数据就过来了。改动后约 3 秒上传，切回页面自动拉取；断网也能用，联网后自动补上。<br>
+      · <b>当天的日程做完了不会马上消失</b>：勾完成后它继续留在当天的时间轴上（变灰加删除线），第二天才收进下面的「已结束 / 已逾期」。跨天的日程（22:00 → 次日 01:00）会在开始那天和结束那天各显示一次，第二天那张会标「昨天开始」。<br>
       · <b>在电脑上用鼠标</b>：点一下日期/时间框就弹出应用自带的日历和时间列表（电脑和微信里长得一样）；悬停到 ✓ ✎ 🗑 上会显示按钮名称；<b>Esc</b> 关闭弹窗，<b>Ctrl / ⌘ + Enter</b> 直接保存；点弹窗外面的灰色区域也能关。<br>
-      · 数据只存在这台手机的浏览器里（<code>localStorage</code>），不会上传到别处；没开同步时<b>清理微信/浏览器缓存会清掉数据</b>，重要内容记得在设置里点「复制备份」存一段文字。
+      · 数据默认只存在这台设备的浏览器里（<code>localStorage</code>）；开了同步才会加密上传到你自己的 Supabase 项目。<b>清理微信/浏览器缓存会清掉本机数据</b>（云端还在，填回同步码就能拉回来），重要内容也可以点「复制备份」存一段文字。
     </div>
   </details>
 
-  <footer>MY SCHEDULE · v3.6 · 2026-10-13 · 离线可用</footer>
+  <footer>MY SCHEDULE · v3.7 · 2026-10-29 · 离线可用</footer>
 </div>
 
 <button class="fab" id="btnAddFab" title="添加事项" aria-label="添加事项">＋</button>
@@ -879,7 +901,7 @@
     </div>
     <div class="fld">
       <label for="fDate">日期</label>
-      <input id="fDate" type="date">
+      <input id="fDate" type="text" inputmode="none" autocomplete="off" readonly placeholder="点这里选择日期">
     </div>
     <div class="quick" id="qDate">
       <button type="button" data-date="today">今天</button>
@@ -891,16 +913,16 @@
     <div class="fld two" id="rowRange">
       <div>
         <label for="fStart">开始时间</label>
-        <input id="fStart" type="time">
+        <input id="fStart" type="text" inputmode="none" autocomplete="off" readonly placeholder="点这里选择">
       </div>
       <div>
         <label for="fEnd">结束时间</label>
-        <input id="fEnd" type="time">
+        <input id="fEnd" type="text" inputmode="none" autocomplete="off" readonly placeholder="点这里选择">
       </div>
     </div>
     <div class="fld" id="rowDue" hidden>
       <label for="fDue">截止时间</label>
-      <input id="fDue" type="time">
+      <input id="fDue" type="text" inputmode="none" autocomplete="off" readonly placeholder="点这里选择">
     </div>
     <div class="quick" id="qRange">
       <button type="button" data-dur="30">30 分钟</button>
@@ -1131,6 +1153,17 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
   var LS_OLD = "myschedule.v1";
   var DAY = 86400000;
 
+  /* ============================================================
+     内置同步服务器：写在这里，任何设备打开都不用再输地址和 key。
+     anon / publishable key 本来就是给浏览器公开用的，拿到它也读不到数据，
+     真正守门的是「同步码」。想换项目，改这两行即可。
+     ============================================================ */
+  var DEFAULT_SYNC = {
+    url : "https://krftsivnqbgcxirtpqgk.supabase.co",
+    key : "sb_publishable_Ev2SC2nV_1UgM54TKeO7bQ_xKmf_On5",
+    code: ""          // 留空：由你在设置里自己定，各设备填同一个
+  };
+
   var CATS = [
     { id:"考试", color:"#dc2f36", tint:"#fdecec" },
     { id:"作业", color:"#c2761a", tint:"#fdf3e3" },
@@ -1215,6 +1248,12 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
     if(e <= s) e = new Date(e.getTime() + DAY);   // 跨天
     return e;
   }
+  /* 一条事项占据的日期区间 [开始那天, 结束那天]。
+     普通事项两端相同；跨天事项（22:00 → 次日 01:00）跨两天，
+     时间轴和日历都按这个区间决定它出现在哪几天。 */
+  function spanDays(it){
+    return [ ymd(startAt(it)), ymd(endAt(it)) ];
+  }
   function durText(ms){
     var mins = Math.floor(Math.abs(ms)/60000);
     var d = Math.floor(mins/1440), h = Math.floor((mins%1440)/60), m = mins%60;
@@ -1281,7 +1320,8 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
       done: !!it.done,
       remindBefore: (it.remindBefore == null ? 15 : it.remindBefore),
       createdAt: it.createdAt || Date.now(),
-      updatedAt: it.updatedAt || Date.now()
+      updatedAt: it.updatedAt || Date.now(),
+      sample: !!it.sample
     };
     if(kind === "due"){
       o.end = it.end || it.start || it.time || "23:59";
@@ -1302,7 +1342,9 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
         if(d && typeof d === "object"){
           state.items = (Array.isArray(d.items) ? d.items : []).map(normalize);
           state.memos = (Array.isArray(d.memos) ? d.memos : []).map(function(m){
-            return { id:m.id||uid(), text:String(m.text||""), important:!!m.important, done:!!m.done, createdAt:m.createdAt||Date.now() };
+            return { id:m.id||uid(), text:String(m.text||""), important:!!m.important, done:!!m.done,
+                     createdAt:m.createdAt||Date.now(), updatedAt:m.updatedAt||m.createdAt||Date.now(),
+                     sample:!!m.sample };
           }).filter(function(m){ return m.text; });
           state.settings = Object.assign(state.settings, d.settings || {});
           state.notified = (d.notified && typeof d.notified === "object") ? d.notified : {};
@@ -1344,10 +1386,14 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
       normalize({ id:uid(), title:"示例：提交实验报告（截止类）", note:"交到课程平台，只有一个截止时刻。", date:c.date, end:"23:59", kind:"due", category:"作业", remindBefore:120 }),
       normalize({ id:uid(), title:"示例：提交奖助学金申请（截止类）", note:"系统到点自动关闭。", date:e.date, end:"17:00", kind:"due", category:"其他", remindBefore:60 })
     ];
+    /* 打上示例标记：以后一旦连上云端、发现远端已有真实数据，
+       这些示例会被自动清掉，免得污染你其它设备上的数据 */
+    state.items.forEach(function(x){ x.sample = true; });
     state.memos = [
       { id:uid(), text:"买充电宝数据线", important:false, done:false, createdAt:Date.now(), updatedAt:Date.now() },
       { id:uid(), text:"记得交医保材料", important:true, done:false, createdAt:Date.now(), updatedAt:Date.now() }
     ];
+    state.memos.forEach(function(x){ x.sample = true; });
     state.seeded = true;
     saveNow();
   }
@@ -1462,9 +1508,11 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
     var now = new Date(), todayK = ymd(now);
     var s = { today:0, active:0, week:0, over:0 };
     state.items.forEach(function(it){
+      var sp = spanDays(it);
+      /* 「今天」= 今天落在它的日期区间内（跨天事项两天都算），已完成也计入 */
+      if(sp[0] <= todayK && todayK <= sp[1]) s.today++;
       if(it.done) return;
       var e = endAt(it);
-      if(it.date === todayK) s.today++;
       if(e < now) s.over++;
       else {
         s.active++;
@@ -1607,25 +1655,40 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
     if(now <= e) return "live";
     return "late";
   }
+  /* 分成三堆：
+     · up      时间轴上要显示的（未开始 / 进行中 / 今天或以后的已完成 / 今天已逾期）
+     · over    往期逾期，进底部折叠区
+     · pastDone 往期完成，进底部折叠区
+     「当天」按结束时间判定：结束日 >= 今天，就还留在时间轴上。 */
   function split(){
-    var now = new Date(), up = [], over = [], done = [];
+    var now = new Date(), todayK = ymd(now);
+    var up = [], over = [], done = [], pastDone = [];
     state.items.forEach(function(it){
       if(!matchFilter(it)) return;
       var p = phase(it, now);
-      if(p === "done") done.push(it);
-      else if(p === "late") over.push(it);
-      else up.push(it);
+      var lastK = spanDays(it)[1];
+      var onOrAfterToday = lastK >= todayK;     // ISO 字符串比较等价于日期比较
+      if(p === "done"){
+        done.push(it);
+        if(onOrAfterToday) up.push(it);          // 今天完成的，继续留在当天时间轴
+        else pastDone.push(it);                  // 第二天才沉到底部
+      } else if(p === "late"){
+        /* 今天已经过时间但没勾完成的，也留在时间轴标红，第二天再沉底 */
+        if(onOrAfterToday) up.push(it);
+        else over.push(it);
+      } else up.push(it);
     });
     up.sort(function(a,b){ return startAt(a) - startAt(b); });
     over.sort(function(a,b){ return endAt(b) - endAt(a); });
     done.sort(function(a,b){ return endAt(b) - endAt(a); });
-    return { up:up, over:over, done:done };
+    pastDone.sort(function(a,b){ return endAt(b) - endAt(a); });
+    return { up:up, over:over, done:done, pastDone:pastDone };
   }
 
   /* ================= 卡片 ================= */
   function statusOf(it, now){
     var s = startAt(it), e = endAt(it);
-    if(it.done) return { cls:"", text:"已完成", pill:"" };
+    if(it.done) return { cls:"done", text:"已完成", pill:'<span class="pill ok">✓ 已完成</span>' };
     if(isDue(it)){
       if(now < e) return { cls:"todo", text:"距截止 "+durText(e-now), pill:"" };
       return { cls:"late", text:"已逾期 "+durText(now-e), pill:'<span class="pill late">已逾期</span>' };
@@ -1643,28 +1706,42 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
     if(st.cls === "live") return { label:"距离结束", val:durText(endAt(it) - now), cls:"live" };
     return { label:"距离开始", val:durText(startAt(it) - now), cls:"todo" };
   }
-  function footTime(it){
+  function footTime(it, carry){
     if(isDue(it)) return "⏳ " + minToStr(toMin(it.end || it.start || "23:59"));
-    return "🕘 " + rangeText(it);
+    var t = rangeText(it);
+    if(carry) t = t.replace(" (次日)", "");   // 已经显示在结束日了，再写「次日」反而看不懂
+    return "🕘 " + t;
   }
-  function cardHtml(it, now, showDate){
+  function cardHtml(it, now, showDate, opt){
+    opt = opt || {};
     var c = catOf(it.category);
     var st = statusOf(it, now);
-    var cls = "card " + st.cls + (it.done ? " done" : "");
+    var cls = "card " + (it.done ? "done" : st.cls);
     var style = "--c:" + (st.cls === "late" ? "#e5484d" : c.color);
     var upd = it.updatedAt || it.createdAt;
+    /* 跨天事项在「结束那天」显示时，标一下它是从哪天延续过来的 */
+    var carryPill = "";
+    if(opt.carry){
+      var sp = spanDays(it);
+      var n = dayDiff(parseYmd(sp[1]), parseYmd(sp[0]));
+      var sd = parseYmd(sp[0]);
+      carryPill = '<span class="pill carry">' +
+        (n === 1 ? "昨天开始" : (n === 2 ? "前天开始" : (sd.getMonth()+1) + "月" + sd.getDate() + "日开始")) +
+        "</span>";
+    }
     return '<article class="' + cls + '" style="' + style + '" data-id="' + it.id + '">' +
       '<div class="card-head">' +
         '<span class="tag" style="color:' + c.color + ";background:" + c.tint + '">' + esc(it.category) + "</span>" +
         (isDue(it) ? '<span class="pill due">截止</span>' : "") +
         (it.important ? '<span class="pill" style="background:#fff5e3;color:#9a6a00">重要</span>' : "") +
+        carryPill +
         st.pill +
         '<span class="upd">' + fromNow(upd) + "</span>" +
       "</div>" +
       '<h3 class="card-title">' + esc(it.title) + "</h3>" +
       (it.note ? '<p class="card-note">' + esc(it.note) + "</p>" : "") +
       '<div class="card-foot">' +
-        '<span class="range">' + (showDate ? '<em>' + (startAt(it).getMonth()+1) + "/" + startAt(it).getDate() + " </em>" : "") + esc(footTime(it)) + "</span>" +
+        '<span class="range">' + (showDate ? '<em>' + (startAt(it).getMonth()+1) + "/" + startAt(it).getDate() + " </em>" : "") + esc(footTime(it, opt.carry)) + "</span>" +
         '<span class="cd ' + st.cls + '" data-cd="' + it.id + '">' + esc(st.text) + "</span>" +
         '<span class="ops">' +
           '<button class="ok" data-act="done" title="' + (it.done ? "取消完成" : "标记完成") + '" aria-label="完成">' + (it.done ? "↺" : "✓") + "</button>" +
@@ -1688,13 +1765,29 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
           : "这段时间没有安排 👍<br><b>点右下角 ＋ 添加一条吧</b>") +
         "</div>";
     } else {
-      var groups = [], map = {};
+      /* 一条跨天事项会同时出现在「开始日」和「结束日」两个分组里；
+         中间隔着的那几天不重复出现，免得把时间轴刷屏 */
+      var pairs = [];
       list.forEach(function(it){
-        var d = startAt(it), k = ymd(d);
-        if(!map[k]){ map[k] = { day:new Date(d.getFullYear(), d.getMonth(), d.getDate()), items:[] }; groups.push(map[k]); }
-        map[k].items.push(it);
+        var sp = spanDays(it);
+        pairs.push({ k: sp[0], it: it, carry: false, at: startAt(it) });
+        if(sp[1] !== sp[0]) pairs.push({ k: sp[1], it: it, carry: true, at: endAt(it) });
       });
+
+      var groups = [], map = {};
+      pairs.forEach(function(p){
+        if(!map[p.k]){
+          map[p.k] = { day: parseYmd(p.k), rows: [] };
+          groups.push(map[p.k]);
+        }
+        map[p.k].rows.push(p);
+      });
+      groups.sort(function(a,b){ return a.day - b.day; });
       groups.forEach(function(g){
+        g.rows.sort(function(a,b){
+          if(a.at - b.at !== 0) return a.at - b.at;
+          return 0;
+        });
         var n = dayDiff(g.day, now);
         var relCls = (n >= 0 && n <= 7) ? "rel" : "rel gray";
         var relTxt = n === 0 ? "就在今天" : (n > 0 ? n + " 天后" : Math.abs(n) + " 天前");
@@ -1703,19 +1796,21 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
             '<span class="d">' + esc(dayLabel(g.day, now)) + "</span>" +
             '<span class="w">' + (g.day.getMonth()+1) + "月" + g.day.getDate() + "日 周" + WEEK[g.day.getDay()] + "</span>" +
             '<span class="' + relCls + '">' + relTxt + "</span>" +
-            '<span class="n">' + g.items.length + " 项</span>" +
+            '<span class="n">' + g.rows.length + " 项</span>" +
           "</div>" +
-          '<div class="cards">' + g.items.map(function(it){ return cardHtml(it, now, false); }).join("") + "</div>" +
+          '<div class="cards">' + g.rows.map(function(p){
+            return cardHtml(p.it, now, false, { carry: p.carry });
+          }).join("") + "</div>" +
         "</div>";
       });
     }
-    var endedCount = s.over.length + s.done.length;
+    var endedCount = s.over.length + s.pastDone.length;
     if(ui.status !== "done" && endedCount){
       html += '<details class="ended"' + (ui.status === "all" && !s.up.length ? " open" : "") + ">" +
         "<summary>已结束 / 已逾期 · " + endedCount + " 项</summary>" +
         '<div class="cards">' +
           s.over.map(function(it){ return cardHtml(it, now, false); }).join("") +
-          s.done.map(function(it){ return cardHtml(it, now, false); }).join("") +
+          s.pastDone.map(function(it){ return cardHtml(it, now, false); }).join("") +
         "</div></details>";
     }
     $("#viewTimeline").innerHTML = html;
@@ -1729,7 +1824,10 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
     var byDay = {};
     state.items.forEach(function(it){
       if(!matchFilter(it)) return;
-      (byDay[it.date] = byDay[it.date] || []).push(it);
+      var sp = spanDays(it);
+      (byDay[sp[0]] = byDay[sp[0]] || []).push(it);
+      /* 跨天事项在结束那天也打一个点，和时间轴的显示保持一致 */
+      if(sp[1] !== sp[0]) (byDay[sp[1]] = byDay[sp[1]] || []).push(it);
     });
     var cells = [], i;
     for(i=0;i<startIdx;i++) cells.push(null);
@@ -1764,7 +1862,10 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
     var sd = parseYmd(ui.calSel);
     html += '<div class="cal-list"><h3>' + (sd.getMonth()+1) + " 月 " + sd.getDate() + " 日 周" + WEEK[sd.getDay()] +
       " · " + sel.length + " 项</h3>" +
-      (sel.length ? '<div class="cards">' + sel.map(function(it){ return cardHtml(it, now, false); }).join("") + "</div>"
+      (sel.length ? '<div class="cards">' + sel.map(function(it){
+        var sp = spanDays(it);
+        return cardHtml(it, now, false, { carry: sp[1] === ui.calSel && sp[0] !== ui.calSel });
+      }).join("") + "</div>"
                   : '<div class="empty">这天还没有安排。</div>') +
       "</div>";
     $("#viewCalendar").innerHTML = html;
@@ -1774,8 +1875,9 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
   function renderCountdown(){
     var now = new Date();
     var s = split();
-    var list = (ui.status === "done") ? s.done
-             : s.up.concat(s.over).sort(function(a,b){ return startAt(a) - startAt(b); });
+    var list = ((ui.status === "done") ? s.done
+             : s.up.concat(s.over).filter(function(it){ return !it.done; }))
+             .sort(function(a,b){ return startAt(a) - startAt(b); });
     if(!list.length){ $("#viewCountdown").innerHTML = '<div class="empty">没有可倒计时的事项。</div>'; return; }
     $("#viewCountdown").innerHTML = '<div class="cds">' + list.map(function(it){
       var st = statusOf(it, now);
@@ -1797,8 +1899,7 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
 
   /* ================= 渲染 ================= */
   function render(){
-    var now = new Date();
-    $("#todayLine").textContent = (now.getMonth()+1) + "月" + now.getDate() + "日 周" + WEEK[now.getDay()] + " · 本地保存";
+    updateTodayLine();
     renderStats();
     renderMemos();
     renderNext();
@@ -1927,15 +2028,9 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
     });
     input.style.display = "none";
   }
-  function buildPickers(){
-    if(!NATIVE_DATE || FORCE_FB) downgradeDate($("#fDate"));
-    if(!NATIVE_TIME || FORCE_FB){ downgradeTime($("#fStart")); downgradeTime($("#fEnd")); downgradeTime($("#fDue")); }
-    if(!NATIVE_DATE || !NATIVE_TIME || FORCE_FB){
-      setTimeout(function(){
-        banner({ kind:"toast", icon:"🧩", t1:"已切换为兼容输入方式", t2:"当前浏览器不支持系统日期/时间选择器，已自动换成下拉选择，功能完全一样。", ms:4000 });
-      }, 800);
-    }
-  }
+  /* 日期 / 时间框已经全部换成只读文本框，由下面这套自绘选择器接管。
+     原生控件不再参与，所以这里不需要再做任何降级或探测。 */
+  function buildPickers(){}
   function syncPickers(){
     $$("[data-fb]").forEach(function(input){
       var wrap = input.nextElementSibling;
@@ -2467,6 +2562,7 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
 
   /* ================= 多设备同步（Supabase） ================= */
   var syncApplying = false, syncTimer = null, syncBusy = false, syncLastOk = 0, syncLastErr = "";
+  var syncPullFailed = false, syInputTimer = null;
 
   function sy(){ return state.settings.sync || {}; }
   function syncReady(){
@@ -2482,21 +2578,63 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
   function syncStatusText(){
     var s = sy();
     if(!s.enabled) return "未开启";
-    if(!syncReady()) return "配置不完整（地址 / key / 同步码至少 6 位）";
+    if(!s.code || String(s.code).length < 6) return "填同步码（≥6 位）后自动同步";
+    if(!syncReady()) return "地址或 key 不完整";
     if(syncBusy) return "同步中…";
     if(syncLastErr) return "同步失败：" + syncLastErr;
     if(syncLastOk) return "上次同步 " + new Date(syncLastOk).toTimeString().slice(0,5);
-    return "还没同步过";
+    return "正在连接…";
+  }
+  /* 顶栏那一行：让「到底同没同步」一眼可见 */
+  function syncLine(){
+    var s = sy();
+    if(!s.enabled) return "本地保存";
+    if(!syncReady()) return "待填同步码";
+    if(syncBusy) return "同步中…";
+    if(syncLastErr) return "同步异常";
+    if(syncLastOk) return "已同步 " + new Date(syncLastOk).toTimeString().slice(0,5);
+    return "等待同步";
+  }
+  function updateTodayLine(){
+    var el = $("#todayLine");
+    if(!el) return;
+    var now = new Date();
+    el.textContent = (now.getMonth()+1) + "月" + now.getDate() + "日 周" + WEEK[now.getDay()] + " · " + syncLine();
+  }
+  /* 内置服务器参数：始终保证各设备连的是同一个项目。
+     地址 / key 与内置值不一致就换回来（第一次换服务器时自动开启同步）；
+     已经一致就不动开关，你手动关掉的同步不会被强行打开。 */
+  function applyDefaultSync(){
+    if(!DEFAULT_SYNC.url || !DEFAULT_SYNC.key) return false;
+    var s = state.settings.sync || (state.settings.sync = { enabled:false, url:"", key:"", code:"" });
+    var changed = false;
+    if(s.url !== DEFAULT_SYNC.url){ s.url = DEFAULT_SYNC.url; changed = true; }
+    if(s.key !== DEFAULT_SYNC.key){ s.key = DEFAULT_SYNC.key; changed = true; }
+    if(DEFAULT_SYNC.code && !s.code){ s.code = DEFAULT_SYNC.code; changed = true; }
+    if(changed){ s.enabled = true; return true; }
+    return false;
+  }
+  /* 正在输入的那个框不要被重绘打断，否则光标会跳 */
+  function setInputVal(el, v){
+    if(!el) return;
+    if(el === document.activeElement) return;
+    if(el.value !== v) el.value = v;
   }
   function renderSync(){
     var s = sy();
-    $("#swSync").classList.toggle("on", !!s.enabled);
-    $("#swSync").setAttribute("aria-checked", s.enabled ? "true" : "false");
-    $("#syncBox").hidden = !s.enabled;
-    if($("#syUrl").value !== (s.url||"")) $("#syUrl").value = s.url || "";
-    if($("#syKey").value !== (s.key||"")) $("#syKey").value = s.key || "";
-    if($("#syCode").value !== (s.code||"")) $("#syCode").value = s.code || "";
-    $("#syStatus").textContent = syncStatusText();
+    var sw = $("#swSync");
+    if(sw){
+      sw.classList.toggle("on", !!s.enabled);
+      sw.setAttribute("aria-checked", s.enabled ? "true" : "false");
+    }
+    var box = $("#syncBox");
+    if(box) box.hidden = !s.enabled;
+    setInputVal($("#syUrl"), s.url || "");
+    setInputVal($("#syKey"), s.key || "");
+    setInputVal($("#syCode"), s.code || "");
+    var st = $("#syStatus");
+    if(st) st.textContent = syncStatusText();
+    updateTodayLine();
   }
   function sqUrl(){ return String(sy().url||"").replace(/\/+$/, ""); }
   function errText(t, status){
@@ -2564,6 +2702,17 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
   function mergeRemote(remote){
     if(!remote || typeof remote !== "object") return false;
     var changed = false;
+    /* 远端已经有真实数据时，把本机自动生成的「示例：…」清掉，
+       免得第一次连上云端就把示例灌进你另一台设备 */
+    if((remote.items || []).length || (remote.memos || []).length){
+      var hadSample = state.items.some(function(it){ return it.sample; }) ||
+                      state.memos.some(function(m){ return m.sample; });
+      if(hadSample){
+        state.items = state.items.filter(function(it){ return !it.sample; });
+        state.memos = state.memos.filter(function(m){ return !m.sample; });
+        changed = true;
+      }
+    }
     var rt = (remote.trash && typeof remote.trash === "object") ? remote.trash : {};
     Object.keys(rt).forEach(function(id){
       if(!state.trash[id] || rt[id] > state.trash[id]){ state.trash[id] = rt[id]; changed = true; }
@@ -2601,7 +2750,7 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
 
   function syncPull(){
     if(!syncReady() || syncBusy) return Promise.resolve(false);
-    syncBusy = true; renderSync();
+    syncBusy = true; syncPullFailed = false; renderSync();
     return rpc("sched_pull", { p_room: roomId(), p_code: sy().code }).then(function(r){
       syncBusy = false; syncLastErr = "";
       var changed = mergeRemote((r && r.data) || null);
@@ -2615,7 +2764,9 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
       renderSync();
       return changed;
     }).catch(function(e){
-      syncBusy = false; syncLastErr = e.message || String(e); renderSync(); return false;
+      syncBusy = false; syncLastErr = e.message || String(e);
+      syncPullFailed = true;             // 标记：这次没拉到，绝不能接着推
+      renderSync(); return false;
     });
   }
   function syncPush(){
@@ -2627,11 +2778,16 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
       syncBusy = false; syncLastErr = e.message || String(e); renderSync(); return false;
     });
   }
-  /* 先拉再推：不会把别的设备刚改的东西覆盖掉 */
+  /* 先拉再推：不会把别的设备刚改的东西覆盖掉。
+     关键：拉取失败时绝不推送 —— 新设备本地是空的，一推就把云端数据盖没了。 */
   function syncNow(){
     if(!syncReady()) return Promise.resolve(false);
     if(syncTimer){ clearTimeout(syncTimer); syncTimer = null; }
-    return syncPull().then(syncPush);
+    syncPullFailed = false;
+    return syncPull().then(function(){
+      if(syncPullFailed) return false;
+      return syncPush();
+    });
   }
   function schedulePush(){
     if(!syncReady() || syncApplying) return;
@@ -2645,17 +2801,42 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
     saveNow(); renderSync();
     if(s.enabled){
       if(syncReady()) syncNow();
-      else banner({ kind:"toast", icon:"☁️", t1:"多设备同步", t2:"把 Supabase 地址、anon key 和同步码填完，就会自动同步。", ms:5000 });
+      else banner({ kind:"toast", icon:"☁️", t1:"多设备同步", t2:"服务器已经填好了，只差一个同步码（≥6 位）。", ms:5000 });
     }
   });
+  /* 输入同步码后不用再点别处：停顿 1 秒就自己同步一次 */
+  function scheduleConfigSync(){
+    if(syInputTimer) clearTimeout(syInputTimer);
+    syInputTimer = setTimeout(function(){
+      syInputTimer = null;
+      syncLastErr = ""; syncLastOk = 0;
+      saveNow(); renderSync();
+      if(!syncReady()) return;
+      syncNow().then(function(ok){
+        if(ok){
+          banner({ kind:"ok", icon:"☁️", t1:"同步完成",
+                   t2:"日程 " + state.items.length + " 条 · 短期提醒 " + state.memos.length + " 条",
+                   ms:2600 });
+        }
+      });
+    }, 1000);
+  }
   [["#syUrl","url"],["#syKey","key"],["#syCode","code"]].forEach(function(p){
-    $(p[0]).addEventListener("change", function(){
+    var el = $(p[0]);
+    el.addEventListener("input", function(){
+      sy()[p[1]] = this.value.trim();
+      syncLastErr = ""; syncLastOk = 0;
+      renderSync();
+      scheduleConfigSync();
+    });
+    el.addEventListener("change", function(){
       var v = this.value.trim();
       if(p[1] === "url" && v && v.indexOf("http") !== 0) v = "https://" + v;
+      if(p[1] === "url") this.value = v;
       sy()[p[1]] = v;
       syncLastErr = ""; syncLastOk = 0;
       saveNow(); renderSync();
-      if(syncReady()) syncNow();
+      scheduleConfigSync();
     });
   });
   $("#btnSyncNow").addEventListener("click", function(){
@@ -2836,7 +3017,11 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
 
   /* ================= 启动 ================= */
   load();
-  seedIfEmpty();
+  /* 先套用内置的服务器参数：地址 / key 与内置值不一致时会换回来，
+     保证手机、电脑连的是同一个项目；同步码不会被改动 */
+  if(applyDefaultSync()) saveNow();
+  /* 已经配好同步的设备不再塞示例数据，免得第一次连云端就把它推上去 */
+  if(!syncReady()) seedIfEmpty();
   buildCatPick();
   syncCatPick();
   renderCats();
@@ -3018,6 +3203,32 @@ grant execute on function public.sched_push(text, text, jsonb) to anon, authenti
 
   /* 同步触发：打开时、切回前台时、每 60 秒 */
   if(syncReady()) setTimeout(syncNow, 600);
+
+  /* 还没填同步码的设备：提示一次，点「以后再说」就不再打扰 */
+  (function(){
+    var TIP_KEY = "myschedule.synctip";
+    try{ if(localStorage.getItem(TIP_KEY) === "off") return; }catch(e){}
+    if(!sy().enabled || syncReady() || !DEFAULT_SYNC.url) return;
+    setTimeout(function(){
+      if(syncReady()) return;
+      banner({
+        kind:"toast", icon:"☁️", t1:"多设备同步还差一步",
+        t2:"在「提醒设置」里填一个同步码，手机和电脑就会共用同一份日程。",
+        ms:18000,
+        actions:[
+          { label:"去填写", pri:true, fn:function(){
+              var p = $("#setPanel");
+              if(p){ p.open = true; if(p.scrollIntoView) p.scrollIntoView({ behavior:"smooth", block:"start" }); }
+              setTimeout(function(){ try{ $("#syCode").focus(); }catch(e){} }, 420);
+            } },
+          { label:"以后再说", fn:function(){
+              try{ localStorage.setItem(TIP_KEY, "off"); }catch(e){}
+            } }
+        ]
+      });
+    }, 1600);
+  })();
+
   var lastAuto = Date.now();
   document.addEventListener("visibilitychange", function(){
     if(!document.hidden && syncReady() && Date.now() - lastAuto > 10000){ lastAuto = Date.now(); syncNow(); }
